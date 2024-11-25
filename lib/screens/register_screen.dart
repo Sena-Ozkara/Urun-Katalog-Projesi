@@ -1,25 +1,47 @@
 import 'package:flutter/material.dart';
+import 'package:urun_katalog_projesi/screens/categories_screen.dart';
 import 'package:urun_katalog_projesi/screens/login_screen.dart';
 import 'package:urun_katalog_projesi/services/api_service.dart';
 
-class RegisterScreen extends StatelessWidget {
+class RegisterScreen extends StatefulWidget {
+  @override
+  _RegisterScreenState createState() => _RegisterScreenState();
+}
+
+class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
-  String email = '', password = '', name = '';
+  String email = '', password = '', name = '', confirmPassword = '';
 
   void _register(BuildContext context) async {
+    final url = Uri.parse('https://assign-api.piton.com.tr/api/rest/register');
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
-      // API çağrısı
-      final response = await AuthService.register(name, email, password);
-      if (response['success']) {
-        Navigator.pushReplacementNamed(context, '/login');
-      } else {
+      // API call
+      try {
+        final response = await AuthService.register(name, email, password);
+        print(response);  // Log the response
+        bool success = response['success'] ?? false;  // 'Başarılı' değeri null ise varsayılan olarak false olur
+
+        if (success) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => CategoriesScreen()),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Kayıt başarısız!')),
+          );
+        }
+      } catch (e) {
+        print('Error: $e');  // API çağrısı başarısız olursa hatayı günlüğe kaydet
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Kayıt başarısız!')),
+          SnackBar(content: Text('Bir hata oluştu: $e')),
         );
       }
     }
   }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -37,7 +59,7 @@ class RegisterScreen extends StatelessWidget {
               // Logo
               Center(
                 child: Image.asset(
-                  'assets/logo1.png',
+                  'assets/logo.png',
                   height: screenHeight * 0.2, // Yüksekliği ekran boyutuna göre ayarlıyoruz
                   width: screenWidth * 0.5, // Genişliği ekran boyutuna göre ayarlıyoruz
                 ),
@@ -89,6 +111,7 @@ class RegisterScreen extends StatelessWidget {
                         fillColor: Color(0xFFE6E6FF),
                       ),
                       onSaved: (value) => name = value!,
+                      validator: (value) => value!.isEmpty ? 'Please enter your name' : null,
                     ),
                     const SizedBox(height: 20),
 
@@ -128,6 +151,7 @@ class RegisterScreen extends StatelessWidget {
                       value != null && value.length >= 6 ? null : "Password is too short",
                       onSaved: (value) => password = value!,
                     ),
+                    const SizedBox(height: 20),
                     SizedBox(height: screenHeight * 0.005),
                   ],
                 ),
@@ -177,8 +201,6 @@ class RegisterScreen extends StatelessWidget {
                   ),
                 ),
               ),
-
-
             ],
           ),
         ),
