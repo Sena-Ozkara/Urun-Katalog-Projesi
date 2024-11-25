@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:urun_katalog_projesi/screens/categories_screen.dart';
 import 'package:urun_katalog_projesi/screens/register_screen.dart';
+import 'package:urun_katalog_projesi/services/api_service.dart';
+import 'package:urun_katalog_projesi/services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -8,6 +11,10 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   bool _isChecked = false; // Checkbox'ın durumunu tutacak değişken
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  String? _errorMessage;
 
   @override
   Widget build(BuildContext context) {
@@ -18,14 +25,14 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       body: Padding(
         padding: const EdgeInsets.all(20.0),
-        child: SingleChildScrollView( // Duyarlı hale getirmek için scrollable yapıyoruz
+        child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Logo
               Center(
                 child: Image.asset(
-                  'assets/logo1.png',
+                  'assets/logo.png',
                   height: screenHeight * 0.2, // Yüksekliği ekran boyutuna göre ayarlıyoruz
                   width: screenWidth * 0.5, // Genişliği ekran boyutuna göre ayarlıyoruz
                 ),
@@ -38,7 +45,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                     Text(
+                    Text(
                       'Welcome back!',
                       style: TextStyle(
                         fontSize: 16,
@@ -58,42 +65,61 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               SizedBox(height: screenHeight * 0.05), // Boyutu ekran yüksekliğine göre ayarlıyoruz
 
-
               // Email and Password fields
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Email',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Enter your email',
-                      border: InputBorder.none,
-                      filled: true,
-                      fillColor: Color(0xFFE6E6FF),
+              Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Email',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
-                  ),
-                  const SizedBox(height: 20),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _emailController,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter your email';
+                        }
+                        if (!RegExp(r"^[a-zA-Z0-9]+@([a-zA-Z0-9-]+\.)+[a-zA-Z0-9-]{2,}$").hasMatch(value)) {
+                          return 'Please enter a valid email address';
+                        }
+                        return null;
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'Enter your email',
+                        border: InputBorder.none,
+                        filled: true,
+                        fillColor: Color(0xFFE6E6FF),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
 
-                  const Text(
-                    'Password',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    obscureText: true,
-                    decoration: InputDecoration(
-                      hintText: 'Enter your password',
-                      border: InputBorder.none,
-                      filled: true,
-                      fillColor: Color(0xFFE6E6FF),
+                    const Text(
+                      'Password',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
-                  ),
-                  SizedBox(height: screenHeight * 0.005), // Boyutu ekran yüksekliğine göre ayarlıyoruz
-                ],
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _passwordController,
+                      obscureText: true,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter your password';
+                        }
+                        return null;
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'Enter your password',
+                        border: InputBorder.none,
+                        filled: true,
+                        fillColor: Color(0xFFE6E6FF),
+                      ),
+                    ),
+                    SizedBox(height: screenHeight * 0.005), // Boyutu ekran yüksekliğine göre ayarlıyoruz
+                  ],
+                ),
               ),
 
               // Beni hatırla and Register
@@ -141,8 +167,32 @@ class _LoginScreenState extends State<LoginScreen> {
               // Giriş Yap button
               Center(
                 child: ElevatedButton(
-                  onPressed: () {
-                    // Giriş işlemleri yapılacak
+                  onPressed: () async {
+                    if (_formKey.currentState?.validate() ?? false) {
+                      try {
+                        var email = _emailController.text;
+                        var password = _passwordController.text;
+
+                        // Giriş işlemi
+                        var response = await AuthService.login(email, password);
+
+                        // Eğer giriş başarılıysa BestSellerScreen'e yönlendir
+                        if (response.containsKey('token')) {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(builder: (context) => CategoriesScreen()),
+                          );
+                        } else {
+                          setState(() {
+                            _errorMessage = 'Invalid credentials. Please try again.';
+                          });
+                        }
+                      } catch (e) {
+                        setState(() {
+                          _errorMessage = 'Failed to login: $e';
+                        });
+                      }
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFEF6B4A),
@@ -164,6 +214,16 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
+
+              // Hata mesajı
+              if (_errorMessage != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 20),
+                  child: Text(
+                    _errorMessage!,
+                    style: TextStyle(color: Colors.red, fontSize: 16),
+                  ),
+                ),
             ],
           ),
         ),
