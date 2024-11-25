@@ -47,7 +47,7 @@ class _SplashScreenState extends State<SplashScreen> {
           Expanded(
             child: Center(
               child: Image.asset(
-                'assets/logo1.png', // Logonuzu 'assets' klasörüne koyun.
+                'assets/logo.png',
                 height: 250,
                 width: 250,
               ),
